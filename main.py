@@ -2,8 +2,13 @@ from fastapi import FastAPI, UploadFile, File
 from typing import List
 from zipfile import ZipFile
 from io import BytesIO
+from pathlib import Path
+import json
 
 from parser import parse_eml
+from openai_client import ask_gpt
+
+PROMPT = Path("prompts/prompt_v1.md").read_text(encoding="utf-8")
 
 app = FastAPI(
     title="EML Parser API",
@@ -36,24 +41,44 @@ async def parse(files: List[UploadFile] = File(...)):
 
                 for name in z.namelist():
 
-                    if name.lower().endswith(".eml"):
+                    # ignora file nascosti MacOS
+                    if name.startswith("__MACOSX/"):
+                        continue
 
-                        eml_bytes = z.read(name)
+                    if not name.lower().endswith(".eml"):
+                        continue
 
-                        emails.append({
-                            "filename": name,
-                            "parsed": parse_eml(eml_bytes)
-                        })
+                    parsed = parse_eml(z.read(name))
 
-        # EML
+                    user_prompt = json.dumps(
+                        {
+                            "sender": parsed["header"]["sender"],
+                            "subject": parsed["header"]["subject"],
+                            "body": parsed["body"]["plain_text"],
+                        },
+                        ensure_ascii=False,
+                    )
+
+                    crm = ask_gpt(PROMPT, user_prompt)
+
+                    emails.append(json.loads(crm))
+
+        # EML singolo
         else:
 
-            emails.append({
-                "filename": file.filename,
-                "parsed": parse_eml(data)
-            })
+            parsed = parse_eml(data)
 
-    return {
-        "count": len(emails),
-        "emails": emails
-    }
+            user_prompt = json.dumps(
+                {
+                    "sender": parsed["header"]["sender"],
+                    "subject": parsed["header"]["subject"],
+                    "body": parsed["body"]["plain_text"],
+                },
+                ensure_ascii=False,
+            )
+
+            crm = ask_gpt(PROMPT, user_prompt)
+
+            emails.append(json.loads(crm))
+
+    return emails

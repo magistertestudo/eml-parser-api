@@ -1,37 +1,38 @@
-from fastapi import FastAPI, UploadFile, File
-from typing import List
-
-from parser import parse_eml
-
-app = FastAPI(
-    title="EML Parser API",
-    version="1.0"
-)
-
-
-@app.get("/")
-def home():
-    return {
-        "service": "EML Parser API",
-        "version": "1.0",
-        "status": "running"
-    }
-
+from zipfile import ZipFile
+from io import BytesIO
 
 @app.post("/parse")
-async def parse(files: list[UploadFile] = File(...)):
+async def parse(files: List[UploadFile] = File(...)):
 
     emails = []
 
     for file in files:
+
         data = await file.read()
 
-        result = parse_eml(data)
+        # ZIP
+        if file.filename.lower().endswith(".zip"):
 
-        emails.append({
-            "filename": file.filename,
-            "parsed": result
-        })
+            with ZipFile(BytesIO(data)) as z:
+
+                for name in z.namelist():
+
+                    if name.lower().endswith(".eml"):
+
+                        eml_bytes = z.read(name)
+
+                        emails.append({
+                            "filename": name,
+                            "parsed": parse_eml(eml_bytes)
+                        })
+
+        # EML
+        else:
+
+            emails.append({
+                "filename": file.filename,
+                "parsed": parse_eml(data)
+            })
 
     return {
         "count": len(emails),

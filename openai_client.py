@@ -12,7 +12,6 @@ def ask_gpt(system_prompt: str, user_prompt: str) -> dict:
 
     response = client.responses.create(
         model="gpt-5.5",
-        temperature=0,
         text={
             "format": {
                 "type": "json_object"

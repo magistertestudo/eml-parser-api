@@ -1,5 +1,24 @@
+from fastapi import FastAPI, UploadFile, File
+from typing import List
 from zipfile import ZipFile
 from io import BytesIO
+
+from parser import parse_eml
+
+app = FastAPI(
+    title="EML Parser API",
+    version="1.0"
+)
+
+
+@app.get("/")
+def home():
+    return {
+        "service": "EML Parser API",
+        "version": "1.0",
+        "status": "running"
+    }
+
 
 @app.post("/parse")
 async def parse(files: List[UploadFile] = File(...)):

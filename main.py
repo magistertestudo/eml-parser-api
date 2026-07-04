@@ -25,6 +25,30 @@ def home():
     }
 
 
+def process_email(eml_bytes: bytes) -> dict:
+    """
+    Estrae i dati dall'email, prepara il prompt
+    e richiama GPT.
+    """
+
+    parsed = parse_eml(eml_bytes)
+
+    user_prompt = json.dumps(
+        {
+            "sender": parsed["header"].get("sender", ""),
+            "subject": parsed["header"].get("subject", ""),
+            "body": parsed["body"].get("plain_text", ""),
+            "attachments": [
+                a.get("filename", "")
+                for a in parsed.get("attachments", [])
+            ]
+        },
+        ensure_ascii=False,
+    )
+
+    return ask_gpt(PROMPT, user_prompt)
+
+
 @app.post("/parse")
 async def parse(files: List[UploadFile] = File(...)):
 
@@ -37,48 +61,31 @@ async def parse(files: List[UploadFile] = File(...)):
         # ZIP
         if file.filename.lower().endswith(".zip"):
 
-            with ZipFile(BytesIO(data)) as z:
+            with ZipFile(BytesIO(data)) as archive:
 
-                for name in z.namelist():
+                for name in archive.namelist():
 
-                    # ignora file nascosti MacOS
+                    # ignora file nascosti macOS
                     if name.startswith("__MACOSX/"):
+                        continue
+
+                    if name.startswith("._"):
                         continue
 
                     if not name.lower().endswith(".eml"):
                         continue
 
-                    parsed = parse_eml(z.read(name))
-
-                    user_prompt = json.dumps(
-                        {
-                            "sender": parsed["header"]["sender"],
-                            "subject": parsed["header"]["subject"],
-                            "body": parsed["body"]["plain_text"],
-                        },
-                        ensure_ascii=False,
+                    emails.append(
+                        process_email(
+                            archive.read(name)
+                        )
                     )
-
-                    crm = ask_gpt(PROMPT, user_prompt)
-
-                    emails.append(json.loads(crm))
 
         # EML singolo
         else:
 
-            parsed = parse_eml(data)
-
-            user_prompt = json.dumps(
-                {
-                    "sender": parsed["header"]["sender"],
-                    "subject": parsed["header"]["subject"],
-                    "body": parsed["body"]["plain_text"],
-                },
-                ensure_ascii=False,
+            emails.append(
+                process_email(data)
             )
-
-            crm = ask_gpt(PROMPT, user_prompt)
-
-            emails.append(json.loads(crm))
 
     return emails

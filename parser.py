@@ -57,12 +57,10 @@ def parse_eml(file_bytes: bytes):
     if html:
         soup = BeautifulSoup(html, "lxml")
         html = str(soup)
-
-    return {
-        "header": header,
-        "body": {
-            "plain_text": plain_text,
-            "html": html
-        },
-        "attachments": attachments
-    }
+return {
+    "header": header,
+    "body": {
+        "plain_text": plain_text
+    },
+    "attachments": attachments
+}

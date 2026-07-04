@@ -8,11 +8,9 @@ client = OpenAI(
 
 def ask_gpt(system_prompt: str, user_prompt: str):
 
-    response = client.chat.completions.create(
+    response = client.responses.create(
         model="gpt-5.5",
-        temperature=0,
-        response_format={"type": "json_object"},
-        messages=[
+        input=[
             {
                 "role": "system",
                 "content": system_prompt
@@ -24,4 +22,4 @@ def ask_gpt(system_prompt: str, user_prompt: str):
         ]
     )
 
-    return response.choices[0].message.content
+    return response.output_text

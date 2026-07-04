@@ -8,7 +8,7 @@ import json
 from parser import parse_eml
 from openai_client import ask_gpt
 
-PROMPT = Path("prompts/prompt_v1.md").read_text(encoding="utf-8")
+PROMPT = Path("prompt_v1.md").read_text(encoding="utf-8")
 
 app = FastAPI(
     title="EML Parser API",

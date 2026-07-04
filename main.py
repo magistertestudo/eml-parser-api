@@ -19,18 +19,21 @@ def home():
 
 
 @app.post("/parse")
-async def parse(files: List[UploadFile] = File(...)):
+async def parse(files: list[UploadFile] = File(...)):
 
     emails = []
 
     for file in files:
-
         data = await file.read()
 
         result = parse_eml(data)
 
-        emails.append(result)
+        emails.append({
+            "filename": file.filename,
+            "parsed": result
+        })
 
     return {
+        "count": len(emails),
         "emails": emails
     }

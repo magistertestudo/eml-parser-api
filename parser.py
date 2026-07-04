@@ -20,7 +20,6 @@ def parse_eml(file_bytes: bytes):
 
     plain_text = ""
     html = ""
-
     attachments = []
 
     for part in msg.walk():
@@ -29,25 +28,31 @@ def parse_eml(file_bytes: bytes):
         disposition = str(part.get_content_disposition())
 
         if content_type == "text/plain" and disposition != "attachment":
-            plain_text += part.get_content()
+            try:
+                plain_text += part.get_content()
+            except Exception:
+                pass
 
         elif content_type == "text/html" and disposition != "attachment":
-            html += part.get_content()
+            try:
+                html += part.get_content()
+            except Exception:
+                pass
 
-filename = part.get_filename()
-content_id = part.get("Content-ID")
+        filename = part.get_filename()
+        content_id = part.get("Content-ID")
 
-if filename or content_id:
+        if filename or content_id:
 
-    payload = part.get_payload(decode=True) or b""
+            payload = part.get_payload(decode=True) or b""
 
-    attachments.append({
-        "filename": filename or "",
-        "mime_type": content_type,
-        "size": len(payload),
-        "inline": content_id is not None,
-        "content_id": content_id or ""
-    })
+            attachments.append({
+                "filename": filename or "",
+                "mime_type": content_type,
+                "size": len(payload),
+                "inline": content_id is not None,
+                "content_id": content_id or ""
+            })
 
     if html:
         soup = BeautifulSoup(html, "lxml")

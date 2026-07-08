@@ -1,36 +1,54 @@
 from datetime import datetime
 
 
-def enrich(record: dict, filename: str, protocol: str = "") -> dict:
+DEFAULTS = {
+
+    "Fonte Contatto": "email",
+
+    "Tipo Contatto": "Customer",
+
+    "Pipeline": "LEAD GENERATI DA IN-SAFETY",
+
+    "Fase": "NUOVE OPPORTUNITÀ",
+
+    "Stato": "open",
+
+    "Valore Lead": "4000",
+
+    "Fonte Opportunità": "email",
+
+    "Privacy Contatto": "Accetto i termini del servizio e della privacy policy",
+
+    "Privacy Opportunity": "Accetto i termini del servizio e della privacy policy",
+
+    "Come ci hai conosciuto": "Motori di ricerca"
+
+}
+
+
+def enrich(
+    record: dict,
+    filename: str,
+    protocol: str = ""
+):
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    record["Fonte Contatto"] = "email"
-    record["Tipo Contatto"] = "Customer"
+    enriched = DEFAULTS.copy()
 
-    record["Pipeline"] = "LEAD GENERATI DA IN-SAFETY"
-    record["Fase"] = "NUOVE OPPORTUNITÀ"
-    record["Stato"] = "open"
+    enriched.update(record)
 
-    record["Valore Lead"] = "4000"
+    enriched["Data Creazione"] = today
 
-    record["Fonte Opportunità"] = "email"
+    enriched["Data Ultima Interazione"] = today
 
-    record["Privacy Contatto"] = "Accetto i termini del servizio e della privacy policy"
-    record["Privacy Opportunity"] = "Accetto i termini del servizio e della privacy policy"
+    enriched["Numero Protocollo"] = protocol
 
-    record["Come ci hai conosciuto"] = "Motori di ricerca"
-
-    record["Numero Protocollo"] = protocol
-
-    record["Nome Opportunità"] = (
-        f"{protocol} | {record.get('Azienda','')}"
+    enriched["Nome Opportunità"] = (
+        f"{protocol} | {enriched.get('Azienda','')}"
         if protocol else ""
     )
 
-    record["Data Creazione"] = today
-    record["Data Ultima Interazione"] = today
+    enriched["Allega File"] = filename
 
-    record["Allega File"] = filename
-
-    return record
+    return enriched

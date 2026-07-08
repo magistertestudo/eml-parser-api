@@ -2,8 +2,13 @@ from fastapi import FastAPI, UploadFile, File
 from typing import List
 from zipfile import ZipFile
 from io import BytesIO
+from pathlib import Path
+import json
 
 from parser import parse_eml
+from openai_client import ask_gpt
+
+PROMPT = Path("prompt_v1.md").read_text(encoding="utf-8")
 
 app = FastAPI(
     title="EML Parser API",
@@ -20,6 +25,30 @@ def home():
     }
 
 
+def process_email(eml_bytes: bytes) -> dict:
+    """
+    Estrae i dati dall'email, prepara il prompt
+    e richiama GPT.
+    """
+
+    parsed = parse_eml(eml_bytes)
+
+    user_prompt = json.dumps(
+        {
+            "sender": parsed["header"].get("sender", ""),
+            "subject": parsed["header"].get("subject", ""),
+            "body": parsed["body"].get("plain_text", ""),
+            "attachments": [
+                a.get("filename", "")
+                for a in parsed.get("attachments", [])
+            ]
+        },
+        ensure_ascii=False,
+    )
+
+    return ask_gpt(PROMPT, user_prompt)
+
+
 @app.post("/parse")
 async def parse(files: List[UploadFile] = File(...)):
 
@@ -32,28 +61,31 @@ async def parse(files: List[UploadFile] = File(...)):
         # ZIP
         if file.filename.lower().endswith(".zip"):
 
-            with ZipFile(BytesIO(data)) as z:
+            with ZipFile(BytesIO(data)) as archive:
 
-                for name in z.namelist():
+                for name in archive.namelist():
 
-                    if name.lower().endswith(".eml"):
+                    # ignora file nascosti macOS
+                    if name.startswith("__MACOSX/"):
+                        continue
 
-                        eml_bytes = z.read(name)
+                    if name.startswith("._"):
+                        continue
 
-                        emails.append({
-                            "filename": name,
-                            "parsed": parse_eml(eml_bytes)
-                        })
+                    if not name.lower().endswith(".eml"):
+                        continue
 
-        # EML
+                    emails.append(
+                        process_email(
+                            archive.read(name)
+                        )
+                    )
+
+        # EML singolo
         else:
 
-            emails.append({
-                "filename": file.filename,
-                "parsed": parse_eml(data)
-            })
+            emails.append(
+                process_email(data)
+            )
 
-    return {
-        "count": len(emails),
-        "emails": emails
-    }
+    return emails

@@ -7,12 +7,13 @@ import json
 
 from parser import parse_eml
 from openai_client import ask_gpt
+from crm_enricher import enrich
 
 PROMPT = Path("prompt_v1.md").read_text(encoding="utf-8")
 
 app = FastAPI(
     title="EML Parser API",
-    version="1.0"
+    version="1.1"
 )
 
 
@@ -20,15 +21,17 @@ app = FastAPI(
 def home():
     return {
         "service": "EML Parser API",
-        "version": "1.0",
+        "version": "1.1",
         "status": "running"
     }
 
 
-def process_email(eml_bytes: bytes) -> dict:
+def process_email(eml_bytes: bytes, filename: str) -> dict:
     """
-    Estrae i dati dall'email, prepara il prompt
-    e richiama GPT.
+    Elabora una singola email:
+    - parsing MIME
+    - chiamata GPT
+    - arricchimento CRM
     """
 
     parsed = parse_eml(eml_bytes)
@@ -43,49 +46,65 @@ def process_email(eml_bytes: bytes) -> dict:
                 for a in parsed.get("attachments", [])
             ]
         },
-        ensure_ascii=False,
+        ensure_ascii=False
     )
 
-    return ask_gpt(PROMPT, user_prompt)
+    crm = ask_gpt(PROMPT, user_prompt)
+
+    crm = enrich(
+        crm,
+        filename=filename
+    )
+
+    return crm
 
 
 @app.post("/parse")
 async def parse(files: List[UploadFile] = File(...)):
 
-    emails = []
+    records = []
 
     for file in files:
 
         data = await file.read()
 
+        # ==========================
         # ZIP
+        # ==========================
         if file.filename.lower().endswith(".zip"):
 
             with ZipFile(BytesIO(data)) as archive:
 
                 for name in archive.namelist():
 
-                    # ignora file nascosti macOS
+                    # ignora cartelle MacOS
                     if name.startswith("__MACOSX/"):
                         continue
 
-                    if name.startswith("._"):
+                    # ignora file nascosti Finder
+                    if name.split("/")[-1].startswith("._"):
                         continue
 
                     if not name.lower().endswith(".eml"):
                         continue
 
-                    emails.append(
+                    records.append(
                         process_email(
-                            archive.read(name)
+                            archive.read(name),
+                            filename=name
                         )
                     )
 
+        # ==========================
         # EML singolo
+        # ==========================
         else:
 
-            emails.append(
-                process_email(data)
+            records.append(
+                process_email(
+                    data,
+                    filename=file.filename
+                )
             )
 
-    return emails
+    return records

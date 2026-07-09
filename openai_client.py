@@ -3,49 +3,35 @@ import os
 
 from openai import OpenAI
 
-client = OpenAI(
-    api_key=os.environ["OPENAI_API_KEY"]
-)
+
+def get_client():
+
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        raise RuntimeError("Variabile OPENAI_API_KEY non configurata.")
+
+    return OpenAI(api_key=api_key)
 
 
 def ask_gpt(system_prompt: str, user_prompt: str) -> dict:
 
+    client = get_client()
+
     response = client.responses.create(
         model="gpt-5.5",
-        text={
-            "format": {
-                "type": "json_object"
-            }
-        },
         input=[
             {
                 "role": "system",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": system_prompt
-                    }
-                ]
+                "content": system_prompt
             },
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": user_prompt
-                    }
-                ]
+                "content": user_prompt
             }
         ]
     )
 
     text = response.output_text.strip()
 
-    try:
-        return json.loads(text)
-
-    except Exception as e:
-
-        raise RuntimeError(
-            f"GPT non ha restituito un JSON valido.\n\n{text}"
-        ) from e
+    return json.loads(text)

@@ -109,12 +109,12 @@ async def parse(files: List[UploadFile] = File(...)):
                 )
             )
 
-csv_data = build_csv(records)
+    csv_data = build_csv(records)
 
-return Response(
-    content=csv_data,
-    media_type="text/csv",
-    headers={
-        "Content-Disposition": 'attachment; filename="contatti_delera.csv"'
-    }
-)
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="contatti_delera.csv"'
+        }
+    )

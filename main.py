@@ -8,6 +8,8 @@ import json
 from parser import parse_eml
 from openai_client import ask_gpt
 from crm_enricher import enrich
+from fastapi.responses import Response
+from csv_exporter import build_csv
 
 PROMPT = Path("prompt_v1.md").read_text(encoding="utf-8")
 
@@ -107,4 +109,12 @@ async def parse(files: List[UploadFile] = File(...)):
                 )
             )
 
-    return records
+csv_data = build_csv(records)
+
+return Response(
+    content=csv_data,
+    media_type="text/csv",
+    headers={
+        "Content-Disposition": 'attachment; filename="contatti_delera.csv"'
+    }
+)

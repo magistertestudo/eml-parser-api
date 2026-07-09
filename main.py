@@ -1,11 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import Response
 
 from typing import List
 from zipfile import ZipFile
 from io import BytesIO
 from pathlib import Path
-
 import json
 
 from parser import parse_eml
@@ -13,10 +12,6 @@ from openai_client import ask_gpt
 from crm_mapper import map_to_delera
 from csv_exporter import build_csv
 
-
-# ==========================================================
-# CONFIGURAZIONE
-# ==========================================================
 
 PROMPT = Path("prompt_v1.md").read_text(encoding="utf-8")
 
@@ -26,10 +21,6 @@ app = FastAPI(
     version="2.0"
 )
 
-
-# ==========================================================
-# HEALTH CHECK
-# ==========================================================
 
 @app.get("/")
 def home():
@@ -45,79 +36,51 @@ def home():
     }
 
 
-# ==========================================================
-# ELABORAZIONE SINGOLA EMAIL
-# ==========================================================
-
 def process_email(
     eml_bytes: bytes,
-    filename: str
+    filename: str,
+    protocol: str
 ) -> dict:
-
-    # Parsing MIME
 
     parsed = parse_eml(eml_bytes)
 
-    # Costruzione prompt GPT
-
     user_prompt = json.dumps(
-
         {
-
-            "sender":
-            parsed["header"].get("sender", ""),
-
-            "subject":
-            parsed["header"].get("subject", ""),
-
-            "body":
-            parsed["body"].get("plain_text", ""),
-
+            "sender": parsed["header"].get("sender", ""),
+            "subject": parsed["header"].get("subject", ""),
+            "body": parsed["body"].get("plain_text", ""),
             "attachments": [
-
                 a.get("filename", "")
-
-                for a in parsed.get(
-                    "attachments",
-                    []
-                )
-
+                for a in parsed.get("attachments", [])
             ]
-
         },
-
         ensure_ascii=False
-
     )
 
-    # Estrazione AI
-
-    ai_record = ask_gpt(
+    ai = ask_gpt(
         PROMPT,
         user_prompt
     )
 
-    # Mapping CRM
-
-    crm_record = map_to_delera(
-
-        ai_record,
-
-        filename=filename
-
+    return map_to_delera(
+        ai,
+        filename=filename,
+        protocol=protocol
     )
 
-    return crm_record
-
-
-# ==========================================================
-# ENDPOINT PRINCIPALE
-# ==========================================================
 
 @app.post("/parse")
 async def parse(
-    files: List[UploadFile] = File(...)
+
+    files: List[UploadFile] = File(...),
+
+    protocol_start: str = Form(...)
+
 ):
+
+    year, progressive = protocol_start.split()
+
+    progressive = int(progressive)
 
     records = []
 
@@ -125,60 +88,54 @@ async def parse(
 
         data = await file.read()
 
-        # --------------------------------------
-        # ZIP
-        # --------------------------------------
-
         if file.filename.lower().endswith(".zip"):
 
             with ZipFile(BytesIO(data)) as archive:
 
                 for name in archive.namelist():
 
-                    # Cartelle MacOS
-
                     if name.startswith("__MACOSX/"):
                         continue
-
-                    # File Finder
 
                     if name.split("/")[-1].startswith("._"):
                         continue
 
-                    # Solo EML
-
                     if not name.lower().endswith(".eml"):
                         continue
+
+                    protocol = f"{year} {progressive}"
 
                     record = process_email(
 
                         archive.read(name),
 
-                        filename=name
+                        filename=name,
+
+                        protocol=protocol
 
                     )
 
                     records.append(record)
 
-        # --------------------------------------
-        # EML
-        # --------------------------------------
+                    progressive += 1
 
         else:
+
+            protocol = f"{year} {progressive}"
 
             record = process_email(
 
                 data,
 
-                filename=file.filename
+                filename=file.filename,
+
+                protocol=protocol
 
             )
 
             records.append(record)
 
-    # ======================================================
-    # GENERAZIONE CSV
-    # ======================================================
+            progressive += 1
 
     csv_data = build_csv(records)
 

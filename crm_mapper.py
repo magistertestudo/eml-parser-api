@@ -5,16 +5,21 @@ def map_to_delera(
     ai: dict,
     filename: str,
     protocol: str = "",
-    owner: str = ""
+    owner: str = "",
+    interaction_date: str = ""
 ) -> dict:
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    if not interaction_date:
+        interaction_date = datetime.now().strftime("%Y-%m-%d")
+
+    province = ai.get("Provincia", "").upper()
+
+    opportunity_name = ""
+
+    if protocol:
+        opportunity_name = f"{protocol} | {ai.get('Azienda','')}"
 
     return {
-
-        # =========================
-        # CONTATTO
-        # =========================
 
         "First Name": ai.get("Nome", ""),
         "Last Name": ai.get("Cognome", ""),
@@ -22,26 +27,21 @@ def map_to_delera(
         "Phone": ai.get("Telefono", ""),
         "Additional Phones": ai.get("Telefono Secondario", ""),
         "Titolo": ai.get("Titolo", ""),
-        "Provincia": ai.get("Provincia", ""),
+        "Provincia": province,
 
         "Contact Source": "email",
-
         "Contact Type": "Customer",
 
         "Privacy Policy Contatto":
         "Accetto i termini del servizio e della privacy policy",
 
         "Data di Ultima interazione del Contatto":
-        today,
+        interaction_date,
 
         "Date of birth": "",
 
-        # =========================
-        # OPPORTUNITY
-        # =========================
-
         "Opportunity Name":
-        f"{protocol} | {ai.get('Azienda','')}" if protocol else "",
+        opportunity_name,
 
         "Pipeline":
         "LEAD GENERATI DA IN-SAFETY",
@@ -61,38 +61,30 @@ def map_to_delera(
         "Opportunity Source":
         "email",
 
-        "Lost Reason Name":
-        "",
+        "Lost Reason Name": "",
 
-        "Codice Promo Opportunità":
-        "",
+        "Codice Promo Opportunità": "",
 
-        "Località di Intervento":
-        "",
+        "Località di Intervento": "",
 
         "Business Name":
         ai.get("Azienda", ""),
 
-        "Data di Chiusura Prevista":
-        "",
+        "Data di Chiusura Prevista": "",
 
         "Data di Creazione":
-        today,
+        interaction_date,
 
         "Privacy Policy":
         "Accetto i termini del servizio e della privacy policy",
 
-        "Cartella Allegati":
-        "",
+        "Cartella Allegati": "",
 
-        "Partner":
-        "",
+        "Partner": "",
 
-        "Commenti Lost Reason":
-        "",
+        "Commenti Lost Reason": "",
 
-        "Coordinatore":
-        "",
+        "Coordinatore": "",
 
         "Numero di Protocollo":
         protocol,

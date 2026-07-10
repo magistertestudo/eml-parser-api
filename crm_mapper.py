@@ -66,11 +66,11 @@ def map_to_delera(
 
     record["Allega File"] = filename
 
-    if protocol:
-        record["Opportunity Name"] = (
-            f"{protocol} | {record.get('Business Name', '')}"
-        )
-    else:
-        record["Opportunity Name"] = ""
+    business = record.get("Business Name", "").strip()
 
-    return record
+if protocol and business:
+    record["Opportunity Name"] = f"{protocol} | {business}"
+elif protocol:
+    record["Opportunity Name"] = protocol
+else:
+    record["Opportunity Name"] = ""

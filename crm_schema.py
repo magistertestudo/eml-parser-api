@@ -19,6 +19,8 @@ Contiene solamente:
 
 CSV_COLUMNS = [
 
+    "ID",
+    "ID Opportunità",
     "First Name",
     "Last Name",
     "Email",

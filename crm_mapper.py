@@ -155,6 +155,8 @@ def map_to_delera(
     # Campi generati
     # -----------------------------
 
+    record["ID"] = ""
+    record["ID Opportunità"] = ""
     record["Data di Ultima interazione del Contatto"] = interaction_date
     record["Date of birth"] = ""
     record["Data di Creazione"] = interaction_date

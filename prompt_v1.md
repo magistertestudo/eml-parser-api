@@ -71,3 +71,13 @@ Restituisci esclusivamente JSON valido con questa struttura:
   "Descrizione Richiesta": "",
   "Soluzione Richiesta": ""
 }
+
+## LOCALIZZAZIONE DEL CONTATTO
+
+Provincia, Comune, CAP, Indirizzo e Nazione devono riferirsi allo stesso indirizzo
+del contatto/azienda mittente, dando priorità alla firma. Non mescolare sede,
+luogo di intervento, destinatario e firme di messaggi precedenti.
+Conserva la sigla o denominazione della provincia come presente. Copia sempre
+Comune, CAP (stringa di cinque cifre con eventuali zeri iniziali), Indirizzo e
+Nazione se presenti: il software normalizzerà la provincia. Non inventare
+una provincia per completare un campo vuoto.

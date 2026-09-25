@@ -80,7 +80,7 @@ def pcloud_mock(fail=None, existing=False):
         if method == fail:
             return httpx.Response(200, json={'result': 2000, 'error': 'secret server details'})
         if method == 'listfolder':
-            payload = {'metadata': {'name': 'OFFERTE 2026', 'ismine': True}}
+            payload = {'metadata': {'name': 'IN-SAFETY-2026', 'folderid': 1, 'isfolder': True, 'ismine': True}}
         elif method == 'createfolderifnotexists':
             payload = {'metadata': {'folderid': 7}}
         elif method == 'uploadfile':
@@ -205,10 +205,10 @@ def test_missing_config_fails_closed(api, monkeypatch):
 
 
 def test_parent_must_match_and_be_owned():
-    for metadata in ({'name':'IN-SAFETY-2026','ismine':True}, {'name':'OFFERTE 2026','ismine':False}):
+    for metadata in ({'folderid':2,'isfolder':True,'ismine':True}, {'folderid':1,'isfolder':True,'ismine':False}, {'folderid':1,'isfolder':False,'ismine':True}):
         transport = httpx.MockTransport(lambda request: httpx.Response(200,json={'result':0,'metadata':metadata}))
         with PCloudClient(Settings('x','api.pcloud.com',1),transport) as cloud:
-            with pytest.raises(PCloudError, match='OFFERTE 2026'):
+            with pytest.raises(PCloudError, match='destinazione'):
                 cloud.archive_email('2026 1',b'x',[])
 
 
@@ -267,3 +267,28 @@ def test_official_geographic_snapshot():
     assert len({row['istat'] for row in data})==7894
     assert not any(row['sigla']=='SU' for row in data)
     assert all(row['provincia'] for row in data)
+
+
+def test_confirmed_parent_configuration(monkeypatch):
+    monkeypatch.setenv('PCLOUD_ENABLED', 'true')
+    monkeypatch.setenv('PCLOUD_ACCESS_TOKEN', 'test-secret')
+    monkeypatch.setenv('PCLOUD_LINK_MODE', 'upload_request')
+    monkeypatch.delenv('PCLOUD_API_HOST', raising=False)
+    monkeypatch.delenv('PCLOUD_PARENT_FOLDER_ID', raising=False)
+    settings = Settings.from_env()
+    assert settings.host == 'api.pcloud.com'
+    assert settings.parent_id == 29662386698
+
+
+def test_opportunity_is_direct_child_of_confirmed_parent():
+    transport, calls = pcloud_mock()
+    def handler(request):
+        if request.url.path == '/listfolder':
+            return httpx.Response(200, json={'result':0, 'metadata':{
+                'name':'IN-SAFETY-2026', 'folderid':29662386698,
+                'isfolder':True, 'ismine':True}})
+        return transport.handle_request(request)
+    with PCloudClient(Settings('test-secret', 'api.pcloud.com', 29662386698), httpx.MockTransport(handler)) as cloud:
+        cloud.archive_email('2026 4000 | ACME', b'original', [])
+    creations = [parse_qs(r.content.decode()) for method,r in calls if method == 'createfolderifnotexists']
+    assert creations == [{'access_token':['test-secret'], 'folderid':['29662386698'], 'name':['2026 4000 | ACME']}]

@@ -22,10 +22,10 @@ class Settings:
         if os.getenv('PCLOUD_ENABLED', 'false').lower() != 'true':
             return None
         token = os.getenv('PCLOUD_ACCESS_TOKEN', '')
-        host = os.getenv('PCLOUD_API_HOST', '')
-        parent = os.getenv('PCLOUD_PARENT_FOLDER_ID', '')
+        host = os.getenv('PCLOUD_API_HOST', 'api.pcloud.com')
+        parent = os.getenv('PCLOUD_PARENT_FOLDER_ID', '29662386698')
         if not token or host not in {'api.pcloud.com', 'eapi.pcloud.com'} or not parent.isdigit() or int(parent) <= 0:
-            raise PCloudError('Configurare token, host regionale e ID della cartella OFFERTE 2026.')
+            raise PCloudError('Configurare token, host regionale e ID della cartella di destinazione.')
         if os.getenv('PCLOUD_LINK_MODE', '') != 'upload_request':
             raise PCloudError('Impostare PCLOUD_LINK_MODE=upload_request per il link di raccolta documentato; il link condiviso con upload richiede verifica specifica.')
         return cls(token, host, int(parent))
@@ -70,8 +70,9 @@ class PCloudClient:
         if not opportunity.strip():
             raise PCloudError('Opportunity Name mancante.')
         parent = self.call('listfolder', {'folderid': self.settings.parent_id}).get('metadata', {})
-        if parent.get('name') != 'OFFERTE 2026' or not parent.get('ismine'):
-            raise PCloudError('La cartella configurata deve essere OFFERTE 2026, di proprietà dell’account.')
+        if (parent.get('folderid') != self.settings.parent_id
+                or not parent.get('isfolder') or not parent.get('ismine')):
+            raise PCloudError('La destinazione deve corrispondere all’ID configurato ed essere una cartella di proprietà dell’account.')
         folder = self.call('createfolderifnotexists', {'folderid': self.settings.parent_id, 'name': safe_name(opportunity)}).get('metadata', {})
         folder_id = folder.get('folderid')
         if not isinstance(folder_id, int) or folder_id <= 0:

@@ -24,7 +24,7 @@ Il codice preesistente dichiara già la versione 2.0: questo branch identifica i
 | `prompt_v1.md` | Richiedere i campi geografici già previsti, tutti riferiti alla stessa sede del mittente; evitare confusione con luogo di intervento e email precedenti. | Implementato |
 | `requirements.txt` | Dichiarare `httpx==0.28.1`, già famiglia di dipendenze usata dal client AI. | Implementato |
 | `.env.example`, `.gitignore` | Configurazione senza segreti e esclusione ambiente locale. | Inclusi |
-| `tests/test_v2.py` | Test geografici, MIME, upload simulati, errori, retry, ZIP e contratto CSV. | 54 test superati |
+| `tests/test_v2.py` | Test geografici, MIME, upload simulati, errori, retry, ZIP e contratto CSV. | 56 test superati |
 | `crm_schema.py`, `csv_exporter.py`, `openai_client.py`, `models.py` | Nessuna modifica necessaria. Cartella Allegati è già nello schema; i modelli Pydantic non sono usati nel flusso corrente. | Invariati |
 
 ## Provincia: comportamento e limiti
@@ -66,9 +66,9 @@ Verifica reale di sola lettura del link ricevuto:
 
 - Server US: `result=0`, nome **IN-SAFETY-2026**, `folderid=29662386698`.
 - Server EU: `result=7001` (codice non valido).
-- Non è stata individuata OFFERTE 2026 nei metadati pubblici restituiti. L'ID sopra NON è da usare come ID di OFFERTE 2026.
+- L’utente ha confermato che questa è la destinazione effettiva: creare le cartelle offerta direttamente al suo interno, senza una cartella intermedia OFFERTE 2026.
 
-Con il token del proprietario, individuare OFFERTE 2026 tramite `listfolder` e configurare il suo vero ID. Il codice rifiuta una destinazione con nome diverso o non di proprietà. Non creare una cartella annuale alternativa sulla base del solo nome del link.
+Destinazione predefinita e riportata in `.env.example`: `PCLOUD_API_HOST=api.pcloud.com`, `PCLOUD_PARENT_FOLDER_ID=29662386698`. Il codice verifica ID, tipo cartella e proprietà tramite `listfolder`, senza imporre un nome. Una rinomina della cartella non cambia la destinazione. Serve ancora il token del proprietario per eseguire le scritture.
 
 ## Attivazione e collaudo reale da completare
 
@@ -78,7 +78,7 @@ Con il token del proprietario, individuare OFFERTE 2026 tramite `listfolder` e c
 4. Inviare un'email di prova con allegati, verificare cartella e file, confrontare hash dell'originale e contenuti degli allegati, aprire il link in una finestra anonima e provare l'upload. Provare anche token errato e cartella errata.
 5. Validare l'anagrafica geografica e casi reali anonimizzati. Solo dopo questi controlli promuovere il candidato e collegare la release al deploy Railway.
 
-Non sono stati eseguiti upload, generati link sull'account, chiamati modelli a pagamento, pubblicati commit o distribuita una release. Mancano token e ID della cartella corretta per il collaudo reale.
+Non sono stati eseguiti upload, generati link sull'account, chiamati modelli a pagamento, pubblicati commit o distribuita una release. La destinazione è confermata; manca il token per il collaudo reale.
 
 ## Retry, nomi e limiti operativi
 
@@ -90,8 +90,12 @@ Il servizio conserva l'impostazione sincrona per batch e legge i file in memoria
 
 ## Verifica locale
 
-Eseguiti `python -m pytest -q`: **54 passed**, Python 3.9 locale con dipendenze del progetto. Verificati contratto CSV e progressivi, HTML, byte binari, EML annidati, omonimi, nomi sicuri, errori pCloud a ogni fase, timeout, controllo destinazione, dimensione upload, riuso link e configurazione esplicita. Le chiamate AI e le scritture pCloud nei test sono simulate. `git diff --check` superato.
+Eseguiti `python -m pytest -q`: **56 passed**, Python 3.9 locale con dipendenze del progetto. Verificati contratto CSV e progressivi, HTML, byte binari, EML annidati, omonimi, nomi sicuri, errori pCloud a ogni fase, timeout, controllo destinazione, dimensione upload, riuso link e configurazione esplicita. Le chiamate AI e le scritture pCloud nei test sono simulate. `git diff --check` superato.
 
 ## Ripresa del lavoro
 
-Aggiornata l’anagrafica ufficiale; aggiunti 16 controlli, compreso il conflitto tra provincia esplicita e località senza CAP nell’indirizzo. Totale 54 test superati. Nessuna modifica ai permessi pCloud e nessun deploy: restano necessari il link/ID corretto di OFFERTE 2026, credenziali server e verifica del contratto API per il link condiviso con upload.
+Aggiornata l’anagrafica ufficiale; aggiunti 16 controlli, compreso il conflitto tra provincia esplicita e località senza CAP nell’indirizzo. Totale 56 test superati. Nessuna modifica ai permessi pCloud e nessun deploy: la destinazione è stata confermata nel link originale; restano necessarie credenziali server e verifica del contratto API per il link condiviso con upload.
+
+## Destinazione confermata dall’utente
+
+Le cartelle Opportunity Name vengono create direttamente dentro IN-SAFETY-2026 (ID 29662386698), sul server api.pcloud.com. Rimosso il controllo sul nome OFFERTE 2026; verificati ID, tipo e proprietà. Due test aggiuntivi controllano configurazione e creazione diretta, senza cartelle intermedie. Totale: 56 test.

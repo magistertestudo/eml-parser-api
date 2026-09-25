@@ -237,3 +237,33 @@ def test_mode_must_be_explicit(monkeypatch):
         monkeypatch.setenv(k,v)
     with pytest.raises(PCloudError,match='upload_request'):
         Settings.from_env()
+
+
+@pytest.mark.parametrize('fields,expected', [
+    ({'Comune':'Olbia'}, 'Gallura Nord-Est Sardegna'),
+    ({'Comune':'Tortolì'}, 'Ogliastra'),
+    ({'Comune':'Carbonia'}, 'Sulcis Iglesiente'),
+    ({'Comune':'Sanluri'}, 'Medio Campidano'),
+    ({'Provincia':'OT'}, 'Gallura Nord-Est Sardegna'),
+    ({'Provincia':'CI'}, 'Sulcis Iglesiente'),
+    ({'Provincia':'OG'}, 'Ogliastra'),
+    ({'Provincia':'VS'}, 'Medio Campidano'),
+    ({'Provincia':'SU'}, ''),
+    ({'Provincia':'SU','Comune':'Carbonia'}, 'Sulcis Iglesiente'),
+    ({'Comune':'Castegnero Nanto'}, 'Vicenza'),
+    ({'Comune':'Murisengo Monferrato'}, 'Alessandria'),
+    ({'Provincia':'FI','Indirizzo':'Via Garibaldi 3, Milano'}, ''),
+    ({'Indirizzo':'Via Garibaldi 3, Milano MI'}, 'Milano'),
+    ({'Indirizzo':'Via Garibaldi 3, Milano FI'}, ''),
+])
+def test_current_geography_and_address_consistency(fields,expected):
+    assert resolve_province(fields).name == expected
+
+
+def test_official_geographic_snapshot():
+    from pathlib import Path
+    data=json.loads(Path('data/comuni.json').read_text())
+    assert len(data)==7894
+    assert len({row['istat'] for row in data})==7894
+    assert not any(row['sigla']=='SU' for row in data)
+    assert all(row['provincia'] for row in data)

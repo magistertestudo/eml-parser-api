@@ -2,7 +2,7 @@
 
 Candidato v2.0: mantiene Dify → FastAPI → AI → CSV Delera e aggiunge risoluzione geografica offline e archiviazione pCloud opzionale.
 
-Il piano file-per-file, le verifiche API e le condizioni per il rilascio sono in [PIANO_V2.md](PIANO_V2.md). Il link pCloud implementato è un **link di raccolta file**, distinto dal link condiviso con visualizzazione e upload. Il collaudo cloud autenticato e la validazione dei dati geografici restano da completare.
+Il piano file-per-file, le verifiche API e le condizioni per il rilascio sono in [PIANO_V2.md](PIANO_V2.md). Il link pCloud implementato è un **link di raccolta file**, distinto dal link condiviso con visualizzazione e upload. Il collaudo cloud autenticato e la validazione dei CAP restano da completare.
 
 ## Avvio
 

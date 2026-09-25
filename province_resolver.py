@@ -24,12 +24,16 @@ def indexes():
     rows = json.loads((Path(__file__).parent / 'data/comuni.json').read_text())
     aliases, cities, caps = {}, {}, {}
     for short, full in PROVINCE.items():
+        if short == "SU":
+            continue  # Abolished: resolve via municipality/CAP, not the former province.
         aliases[key(short)] = full
         aliases[key(full)] = full
     aliases.update({key('Bolzano/Bozen'): 'Bolzano', key("Valle d'Aosta/Vallée d'Aoste"): 'Aosta'})
     for row in rows:
         name = PROVINCE.get(row['sigla'], row['provincia'])
         aliases[key(row['provincia'])] = name
+        if row['sigla']:
+            aliases[key(row['sigla'])] = name
         for city in (row['comune'], row['alias']):
             if city:
                 cities.setdefault(key(city), set()).add(name)
@@ -71,11 +75,17 @@ def resolve_province(ai):
                    if locality == c or locality.startswith(c + ' ')]
         if matches:
             evidence.append(max(matches, key=lambda item: item[0])[1])
-    elif not evidence:
+    else:
         # Exact locality or locality after comma; do not scan arbitrary email prose.
         for segment in address.split(','):
-            if key(segment) in cities:
-                evidence.append(cities[key(segment)])
+            locality = key(segment)
+            if locality in cities:
+                evidence.append(cities[locality])
+            else:
+                # A trailing abbreviation is meaningful only after a known municipality.
+                match = re.fullmatch(r'(.+?)\s+\(?([A-Z]{2})\)?', segment.strip())
+                if match and key(match[1]) in cities and key(match[2]) in aliases:
+                    evidence.extend([cities[key(match[1])], {aliases[key(match[2])]}])
     if not evidence:
         return Resolution()
     candidates = set.intersection(*evidence)

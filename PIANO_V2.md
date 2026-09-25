@@ -15,7 +15,8 @@ Il codice preesistente dichiara già la versione 2.0: questo branch identifica i
 | `parser.py` | Conservare byte e metadati degli allegati; includere inline, allegati senza nome, email annidate; testo da HTML quando manca plain text; evitare che le firme delle email allegate contaminino l'estrazione. | Implementato |
 | `province_resolver.py` | Ricerca offline per sigla/nome, comune, CAP esatto e località postale nell'indirizzo; normalizzazione accenti/punteggiatura; controllo conflitti e Paesi esteri. | Implementato |
 | `province_legacy.py` | Spostare la tabella esistente delle sigle, mantenendo le denominazioni CRM già utilizzate, ad esempio Firenze, Bolzano, Aosta. | Implementato |
-| `data/comuni.json` | Snapshot ridotto di 7.896 comuni, alternative linguistiche e CAP; nessuna chiamata esterna con indirizzi personali. | Implementato; limiti sotto |
+| `data/comuni.json` | Anagrafica ufficiale ISTAT, 7.894 comuni, alternative linguistiche; CAP integrati separatamente. | Aggiornato; limiti postali sotto |
+| `scripts/update_istat.py` | Import offline ripetibile dello XLSX ISTAT, controllo schema e codici, nessuna invenzione di CAP. | Implementato |
 | `data/README.md`, `data/LICENSE-DATA` | Provenienza, revisione esatta, attribuzione, trasformazioni e limiti del dataset. | Inclusi |
 | `crm_mapper.py` | Sostituire la conversione della sola sigla con il resolver. Opportunity Name e altri campi rimangono come prima. | Implementato |
 | `pcloud_client.py` | Configurazione, verifica cartella proprietaria, creazione/riuso per Opportunity Name, caricamenti, verifica dimensioni, creazione/riuso link raccolta, gestione errori. | Implementato e simulato; manca prova autenticata |
@@ -23,7 +24,7 @@ Il codice preesistente dichiara già la versione 2.0: questo branch identifica i
 | `prompt_v1.md` | Richiedere i campi geografici già previsti, tutti riferiti alla stessa sede del mittente; evitare confusione con luogo di intervento e email precedenti. | Implementato |
 | `requirements.txt` | Dichiarare `httpx==0.28.1`, già famiglia di dipendenze usata dal client AI. | Implementato |
 | `.env.example`, `.gitignore` | Configurazione senza segreti e esclusione ambiente locale. | Inclusi |
-| `tests/test_v2.py` | Test geografici, MIME, upload simulati, errori, retry, ZIP e contratto CSV. | 38 test superati |
+| `tests/test_v2.py` | Test geografici, MIME, upload simulati, errori, retry, ZIP e contratto CSV. | 54 test superati |
 | `crm_schema.py`, `csv_exporter.py`, `openai_client.py`, `models.py` | Nessuna modifica necessaria. Cartella Allegati è già nello schema; i modelli Pydantic non sono usati nel flusso corrente. | Invariati |
 
 ## Provincia: comportamento e limiti
@@ -32,7 +33,9 @@ Esempi: `fi` → Firenze; `Sesto Fiorentino` → Firenze; CAP `00118` → Roma; 
 
 Le denominazioni estese italiane seguono la tabella CRM preesistente; vengono riconosciute anche alcune varianti ufficiali/bilingui. Le località estere, i dati assenti, i CAP sconosciuti e i conflitti non vengono indovinati. Non si scandisce tutto il corpo cercando sigle isolate: parole comuni o sedi di destinatari creerebbero falsi positivi.
 
-Il [dataset RP92/comuni-italiani](https://github.com/RP92/comuni-italiani) deriva da ISTAT e Garda Informatica, ma è non ufficiale e dichiara CAP best-effort. Lo snapshot contiene ancora Sud Sardegna. Occorre validare/aggiornare l'anagrafica per le variazioni amministrative sarde e per i CAP recenti prima di dichiarare copertura nazionale aggiornata. Il file può essere sostituito con dati validati mantenendo lo stesso schema. Il riconoscimento dipende inoltre dall'estrazione corretta dei campi da parte dell'AI: non è una garanzia del 100% su qualunque email.
+L'anagrafica è ora importata direttamente dall'[elenco ufficiale ISTAT al 21 febbraio 2026](https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/): 7.894 comuni, inclusa la riforma della Sardegna. Sigle CI, OG, OT e VS sono associate alle denominazioni correnti; SU da sola non genera più Sud Sardegna. Comune e CAP possono risolvere il caso anche se la firma riporta SU. Una sigla storica ancora valida altrove ma in conflitto con il comune produce un avviso, non una correzione arbitraria.
+
+I CAP restano quelli best-effort del [dataset RP92/comuni-italiani](https://github.com/RP92/comuni-italiani), trasferiti solo a denominazioni identiche. Quattro comuni nuovi/ridenominati sono senza CAP nella tabella: Murisengo Monferrato, Castegnero Nanto, Tripi - Abakainon e Jonadi; la ricerca per nome funziona. Non si dichiara una garanzia del 100% sui CAP o sull'estrazione AI. Fonte, hash del file ufficiale e licenze sono in data/README.md; scripts/update_istat.py consente di ripetere l'importazione.
 
 ## Verifica pCloud: API, SDK e requisito del link
 
@@ -49,7 +52,7 @@ Documentazione ufficiale consultata il 25 settembre 2026:
 
 **Distinzione essenziale:** un link di raccolta permette di inviare documenti senza account, come descritto nelle [File Requests pCloud](https://help.pcloud.com/article/file-requests). Non equivale al link di cartella con visualizzazione/scaricamento più upload richiesto nella conversazione. Il candidato implementa soltanto il link di raccolta documentato e lo inserisce in Cartella Allegati quando si configura esplicitamente `PCLOUD_LINK_MODE=upload_request`. Non presenta questo come implementazione verificata dell'opzione della UI.
 
-Per ottenere precisamente il link condiviso con upload serve verificare sull'account il comportamento della UI e ottenere da pCloud il contratto/supporto dell'endpoint o dei parametri specifici. Non sono stati inventati parametri `enableupload` o simili, né usati endpoint privati. Questo punto rimane aperto per la release definitiva.
+Il [blog ufficiale pCloud](https://blog.pcloud.com/improved-sharing-options-in-pcloud-to-help-you-do-more/) conferma la disponibilità di lettura e upload sullo stesso link nell’interfaccia. Per ottenere precisamente il link condiviso con upload via API serve verificare sull'account il comportamento della UI e ottenere da pCloud il contratto/supporto dell'endpoint o dei parametri specifici. Non sono stati inventati parametri `enableupload` o simili, né usati endpoint privati. Questo punto rimane aperto per la release definitiva.
 
 Il portale [pCloud Developers](https://docs.pcloud.com/) elenca SDK per C, Java, JavaScript, PHP e Swift. Non vi è un SDK Python ufficiale elencato: per evitare un wrapper comunitario ulteriore, il progetto usa le API HTTP JSON direttamente.
 
@@ -87,4 +90,8 @@ Il servizio conserva l'impostazione sincrona per batch e legge i file in memoria
 
 ## Verifica locale
 
-Eseguiti `python -m pytest -q`: **38 passed**, Python 3.9 locale con dipendenze del progetto. Verificati contratto CSV e progressivi, HTML, byte binari, EML annidati, omonimi, nomi sicuri, errori pCloud a ogni fase, timeout, controllo destinazione, dimensione upload, riuso link e configurazione esplicita. Le chiamate AI e le scritture pCloud nei test sono simulate. `git diff --check` superato.
+Eseguiti `python -m pytest -q`: **54 passed**, Python 3.9 locale con dipendenze del progetto. Verificati contratto CSV e progressivi, HTML, byte binari, EML annidati, omonimi, nomi sicuri, errori pCloud a ogni fase, timeout, controllo destinazione, dimensione upload, riuso link e configurazione esplicita. Le chiamate AI e le scritture pCloud nei test sono simulate. `git diff --check` superato.
+
+## Ripresa del lavoro
+
+Aggiornata l’anagrafica ufficiale; aggiunti 16 controlli, compreso il conflitto tra provincia esplicita e località senza CAP nell’indirizzo. Totale 54 test superati. Nessuna modifica ai permessi pCloud e nessun deploy: restano necessari il link/ID corretto di OFFERTE 2026, credenziali server e verifica del contratto API per il link condiviso con upload.

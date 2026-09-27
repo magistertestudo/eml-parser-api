@@ -99,3 +99,13 @@ Aggiornata l’anagrafica ufficiale; aggiunti 16 controlli, compreso il conflitt
 ## Destinazione confermata dall’utente
 
 Le cartelle Opportunity Name vengono create direttamente dentro IN-SAFETY-2026 (ID 29662386698), sul server api.pcloud.com. Rimosso il controllo sul nome OFFERTE 2026; verificati ID, tipo e proprietà. Due test aggiuntivi controllano configurazione e creazione diretta, senza cartelle intermedie. Totale: 56 test.
+
+## Alternativa 1 — autenticazione diretta (27 settembre 2026)
+
+Implementata la selezione `PCLOUD_AUTH_TYPE=direct` con `PCLOUD_AUTH_TOKEN`, inviato nel parametro POST `auth`. La modalità OAuth resta disponibile con `PCLOUD_AUTH_TYPE=oauth` e `PCLOUD_ACCESS_TOKEN`. I token non compaiono nella rappresentazione della configurazione.
+
+`pcloud_login.py` esegue su terminale locale un login HTTPS documentato `userinfo/getauth`, leggendo la password senza eco. Richiede durata massima e inattività di 30 giorni. Non conserva la password e non legge credenziali del browser. Salva il token in `.env.pcloud.secret` (permessi 0600, escluso da Git), poi verifica proprietà e ID della cartella senza scritture remote. Se il servizio richiede 2FA o rifiuta la procedura, interrompe senza indebolire le protezioni. La password si inserisce solo nel terminale, mai in chat.
+
+La durata richiesta va verificata con pCloud e il token rinnovato alla scadenza; il file locale non è caricato automaticamente dall’app. Trasferire il token nelle variabili riservate Railway solo dopo il successo del test. L’attivazione resta separata: il codice v2 è ancora nel branch locale e il link condiviso con upload non è ancora verificato.
+
+Test: 64 superati; autenticazione reale in attesa dell’inserimento locale delle credenziali da parte dell’utente.

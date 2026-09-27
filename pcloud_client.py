@@ -3,7 +3,7 @@ import hashlib
 import os
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import httpx
 
 
@@ -13,22 +13,30 @@ class PCloudError(RuntimeError):
 
 @dataclass(frozen=True)
 class Settings:
-    token: str
+    token: str = field(repr=False)
     host: str
     parent_id: int
+    auth_type: str = "oauth"
+
+    def __post_init__(self):
+        if self.auth_type not in {"oauth", "direct"}:
+            raise PCloudError("PCLOUD_AUTH_TYPE deve essere oauth o direct.")
 
     @classmethod
     def from_env(cls):
         if os.getenv('PCLOUD_ENABLED', 'false').lower() != 'true':
             return None
-        token = os.getenv('PCLOUD_ACCESS_TOKEN', '')
+        auth_type = os.getenv('PCLOUD_AUTH_TYPE', 'oauth')
+        if auth_type not in {'oauth', 'direct'}:
+            raise PCloudError('PCLOUD_AUTH_TYPE deve essere oauth o direct.')
+        token = os.getenv('PCLOUD_AUTH_TOKEN' if auth_type == 'direct' else 'PCLOUD_ACCESS_TOKEN', '')
         host = os.getenv('PCLOUD_API_HOST', 'api.pcloud.com')
         parent = os.getenv('PCLOUD_PARENT_FOLDER_ID', '29662386698')
         if not token or host not in {'api.pcloud.com', 'eapi.pcloud.com'} or not parent.isdigit() or int(parent) <= 0:
             raise PCloudError('Configurare token, host regionale e ID della cartella di destinazione.')
         if os.getenv('PCLOUD_LINK_MODE', '') != 'upload_request':
             raise PCloudError('Impostare PCLOUD_LINK_MODE=upload_request per il link di raccolta documentato; il link condiviso con upload richiede verifica specifica.')
-        return cls(token, host, int(parent))
+        return cls(token, host, int(parent), auth_type)
 
 
 def safe_name(name):
@@ -56,7 +64,7 @@ class PCloudClient:
 
     def call(self, method, data, files=None):
         try:
-            response = self.http.post('/' + method, data={'access_token': self.settings.token, **data}, files=files)
+            response = self.http.post('/' + method, data={**data, ('auth' if self.settings.auth_type == 'direct' else 'access_token'): self.settings.token}, files=files)
             response.raise_for_status()
             result = response.json()
         except (httpx.HTTPError, ValueError):

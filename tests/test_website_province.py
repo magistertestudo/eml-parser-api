@@ -88,3 +88,9 @@ def test_pipeline_uses_website_result(monkeypatch):
     msg['From'] = 'a@azienda-demo.it'
     msg.set_content('Richiesta preventivo, senza indirizzo')
     assert main.process_email(msg.as_bytes(), 'test.eml', '2026 1')['Provincia'] == 'Firenze'
+
+
+def test_malformed_site_link_does_not_abort_extraction():
+    def fetch(url, *_):
+        return url, '<a href="https://[invalid">Contatti</a><footer>50019 Sesto Fiorentino</footer>'
+    assert w.website_province('a@azienda-demo.it', fetch).name == 'Firenze'

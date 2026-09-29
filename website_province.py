@@ -161,8 +161,11 @@ def website_province(email, fetcher=None):
         # Only follow contact/location/about links found on this same site.
         links = []
         for a in soup.find_all('a', href=True):
-            target = urljoin(final_url, a['href']).split('#', 1)[0]
-            label = key(a.get_text(' ', strip=True) + ' ' + urlsplit(target).path)
+            try:
+                target = urljoin(final_url, a['href']).split('#', 1)[0]
+                label = key(a.get_text(' ', strip=True) + ' ' + urlsplit(target).path)
+            except ValueError:
+                continue
             if re.search(r'\b(contatti|contatto|contact|contacts|sedi|sede|dove siamo|chi siamo|about)\b', label):
                 if allowed_url(target, domain) and target not in seen:
                     links.append(target)

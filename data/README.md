@@ -18,3 +18,24 @@ Attribuzione e licenze: dati amministrativi ISTAT CC BY 3.0 (https://creativecom
 componente CAP RP92/ISTAT/Garda Informatica CC BY 4.0, con avviso originario in LICENSE-DATA.
 Questo file e l'importer documentano le modifiche. Non attribuire a ISTAT i CAP integrati da terzi.
 Nessuna interrogazione esterna con indirizzi/email durante la normalizzazione.
+
+## Popolazione provinciale per ripiego (2.0.3)
+
+Fonte: ISTAT Demo, bilancio demografico e popolazione residente al 31 dicembre
+2025 (dato provvisorio), https://demo.istat.it/app/?i=P02.
+Download: https://demo.istat.it/data/p2/P2_2025_it_Comuni.zip
+Acquisizione: 29 settembre 2026.
+SHA-256 ZIP: 614fef7e3e5fe559aafac4ecf82cf6ac8a968d4d4f03103ee90d9aaa692de5f2.
+
+`province_population.json` aggrega i 7.896 comuni del bilancio 2025 nelle 110
+province dell'anagrafica attuale: 58.942.828 residenti complessivi. Campo usato:
+“Popolazione al 31 dicembre - Totale”, entrambi i sessi. Non sono popolazioni
+dei capoluoghi, né previsioni demografiche. I dati non si aggiornano da soli:
+il file riporta data, fonte, stato e hash; rigenerazione con
+`scripts/update_population.py /percorso/P2_2025_it_Comuni.zip`.
+
+Le ricodifiche della Sardegna sono abbinate per nome univoco entro la regione;
+Lirio è aggregato a Montalto Pavese e Castegnero/Nanto a Castegnero Nanto.
+Fonte delle fusioni: https://www.istat.it/wp-content/uploads/2026/02/Novita-2026-2017-26febbraio2026.pdf.
+Import interrotto se risultano duplicati, abbinamenti ambigui o comuni mancanti.
+Dati ISTAT CC BY 3.0 IT, aggregazione effettuata da questo progetto.

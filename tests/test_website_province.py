@@ -42,7 +42,7 @@ def test_contact_page_and_ambiguity():
         calls.append(url)
         return url, ('<a href="/contatti">Contatti</a><footer>50019 Sesto Fiorentino (FI)</footer>'
                      if url.endswith('/') else '<address>20121 Milano (MI)</address>')
-    assert w.website_province('a@azienda-demo.it', fetch).reason == 'website_conflict'
+    assert w.website_province('a@azienda-demo.it', fetch).name == 'Milano'
     assert 'https://azienda-demo.it/contatti' in calls
     assert len(calls) <= 4
 
@@ -117,8 +117,8 @@ def test_conflicting_legal_offices_on_different_pages():
         return url, ('<a href="/contatti">Contatti</a><p>Sede legale: 20121 Milano</p>'
                      if url.endswith('/') else '<p>Sede legale: 50019 Sesto Fiorentino</p>')
     result = w.website_province('a@azienda-demo.it', fetch)
-    assert not result.name
-    assert result.reason == 'website_registered_office_conflict'
+    assert result.name == 'Milano'
+    assert result.reason == 'website_population_fallback'
 
 
 @pytest.mark.parametrize('html', [
@@ -126,5 +126,5 @@ def test_conflicting_legal_offices_on_different_pages():
     '<p>Sede legale: 50019 Milano</p><p>Filiale: 20121 Milano</p>',
     '<p>Sede legale: 50019 Sesto Fiorentino; 20121 Milano</p>',
 ])
-def test_unresolved_legal_office_never_borrows_branch_address(html):
-    assert not w.website_province('a@azienda-demo.it', lambda url,*_: (url,html)).name
+def test_unresolved_legal_office_uses_observed_provinces(html):
+    assert w.website_province('a@azienda-demo.it', lambda url,*_: (url,html)).name == 'Milano'

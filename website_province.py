@@ -12,6 +12,7 @@ from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 from province_resolver import Resolution, indexes, key, resolve_province
+from province_population import most_populous
 
 # Provider brands are blocked across country TLDs (e.g. yahoo.it/co.uk).
 PROVIDER_BRANDS = set('''gmail googlemail outlook hotmail live msn yahoo ymail rocketmail
@@ -203,10 +204,9 @@ def website_province(email, fetcher=None):
     if legal_provinces:
         if len(legal_provinces) == 1 and '' not in legal_provinces:
             return Resolution(legal_provinces.pop(), 'website_registered_office')
-        return Resolution(reason='website_registered_office_conflict')
-    if len(provinces) == 1 and '' not in provinces:
-        return Resolution(provinces.pop(), 'website_resolved')
-    return Resolution(reason='website_conflict' if provinces else 'website_not_found')
+    # If the legal office is absent/ambiguous, use only locations actually
+    # resolved on the website, ranked by province population (user policy).
+    return most_populous(provinces | legal_provinces)
 
 
 def fallback_province(ai, sender=''):

@@ -239,6 +239,24 @@ def test_mode_must_be_explicit(monkeypatch):
         Settings.from_env()
 
 
+def test_public_read_archives_without_upload_link_endpoints():
+    base, calls = pcloud_mock()
+    def handler(request):
+        assert request.url.path not in {'/listuploadlinks', '/createuploadlink', '/changepublink'}
+        if request.url.path == '/getfolderpublink':
+            return httpx.Response(200, json={'result': 0, 'link': 'https://u.pcloud.link/publink/show?code=test'})
+        return base.handle_request(request)
+    with PCloudClient(Settings('test-secret', 'api.pcloud.com', 1, link_mode='public_read'), httpx.MockTransport(handler)) as cloud:
+        assert cloud.archive_email('2026 1', b'x', []) == 'https://u.pcloud.link/publink/show?code=test'
+
+
+def test_public_read_link_requires_valid_response():
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json={'result': 0, 'link': ''}))
+    with PCloudClient(Settings('x', 'api.pcloud.com', 1, link_mode='public_read'), transport) as cloud:
+        with pytest.raises(PCloudError, match='link pubblico'):
+            cloud.public_read_link(2)
+
+
 @pytest.mark.parametrize('fields,expected', [
     ({'Comune':'Olbia'}, 'Gallura Nord-Est Sardegna'),
     ({'Comune':'Tortolì'}, 'Ogliastra'),

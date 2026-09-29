@@ -1,8 +1,33 @@
 # EML Parser API — candidato v2.0
 
+## Configurazione corrente: link pubblico di lettura
+
+L'ultima scelta dell'utente sostituisce tutte le opzioni intermedie sotto:
+`PCLOUD_LINK_MODE=public_read`. L'app archivia EML e allegati e inserisce nel CSV
+il link normale pCloud per consultare/scaricare. Nessuna richiesta file e nessun
+upload dal link per i destinatari. Rimosso il ramo sperimentale shared_upload.
+Conservati architettura FastAPI/Dify e token OAuth originale già inserito su Railway.
+
+Collaudo reale riuscito: `getfolderpublink` con token OAuth originale sulla cartella
+TEST ID 33367484071; `showpublink` senza autenticazione restituisce la stessa cartella
+con i due file sintetici. Prima verificati creazione cartella, upload EML/allegato e
+checksum dell'allegato. Test locali: 69 superati. `git diff --check` superato.
+Variabili necessarie: PCLOUD_AUTH_TYPE=oauth, PCLOUD_LINK_MODE=public_read,
+PCLOUD_API_HOST=api.pcloud.com, PCLOUD_PARENT_FOLDER_ID=29662386698,
+PCLOUD_ACCESS_TOKEN riservato, PCLOUD_ENABLED=true solo all'attivazione del codice v2.
+Il collaudo completo Dify/AI/CSV in produzione resta da eseguire dopo la distribuzione.
+
 ## Stato aggiornato al 29 settembre 2026
 
 ### Collaudo reale dopo autorizzazione a procedere
+
+Verifica successiva con nuovo token ottenuto dopo autorizzazione con
+`permissions=manageshares`: `listfolder` risponde HTTP 200/result 0 e conferma
+la destinazione; `listuploadlinks` risponde HTTP 200/result 1000. Il permesso
+aggiuntivo non risolve il blocco osservato. Il nuovo token è conservato in
+`.env.pcloud.oauth.manageshares.secret`, escluso da Git, senza sostituire quello
+precedente. Non sostituire il token Railway come presunta soluzione. Serve
+conferma pCloud sul supporto OAuth delle richieste file; nessun deploy eseguito.
 
 Creata nella destinazione la cartella `TEST TECNICO EML v2 - 2026-09-29` con
 email sintetica e allegato di prova (2 file). `listfolder`, creazione cartella,

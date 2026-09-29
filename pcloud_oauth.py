@@ -1,4 +1,5 @@
 """Local, interactive OAuth bootstrap; credentials never enter command arguments."""
+import argparse
 import getpass
 import os
 from pathlib import Path
@@ -41,7 +42,12 @@ def save_token(path, token):
 
 
 def main():
-    target = Path(__file__).with_name('.env.pcloud.oauth.secret')
+    arguments = argparse.ArgumentParser(description=__doc__)
+    arguments.add_argument('--manageshares', action='store_true',
+                           help='Salva separatamente il token e verifica le richieste file.')
+    options = arguments.parse_args()
+    target = Path(__file__).with_name('.env.pcloud.oauth.manageshares.secret'
+                                    if options.manageshares else '.env.pcloud.oauth.secret')
     if target.exists():
         raise PCloudError('Token OAuth locale già presente. Non ripetere: torna alla conversazione per verificarlo.')
     if not sys.stdin.isatty():
@@ -63,6 +69,12 @@ def main():
                           'filtermeta': 'folderid,isfolder,ismine'}).get('metadata', {})
         if meta.get('folderid') != PARENT_ID or not meta.get('isfolder') or not meta.get('ismine'):
             raise PCloudError('Token salvato, ma accesso alla destinazione non confermato. Non ripetere il login.')
+        if options.manageshares:
+            try:
+                cloud.call('listuploadlinks', {})
+            except PCloudError:
+                raise PCloudError('Nuovo token salvato separatamente, ma verifica richieste file non riuscita. Non ripetere il login: torna alla conversazione.') from None
+            print('ELENCO RICHIESTE FILE ACCESSIBILE. La creazione del link resta da collaudare.')
     print('ACCESSO OAUTH VERIFICATO. Nessun file caricato. Torna alla conversazione e scrivi: fatto.')
 
 

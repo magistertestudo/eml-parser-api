@@ -36,8 +36,8 @@ class Settings:
         if not token or host not in {'api.pcloud.com', 'eapi.pcloud.com'} or not parent.isdigit() or int(parent) <= 0:
             raise PCloudError('Configurare token, host regionale e ID della cartella di destinazione.')
         link_mode = os.getenv('PCLOUD_LINK_MODE', '')
-        if link_mode != 'upload_request':
-            raise PCloudError('Impostare PCLOUD_LINK_MODE=upload_request per consentire caricamenti senza account.')
+        if link_mode not in {'upload_request', 'public_read'}:
+            raise PCloudError('Impostare PCLOUD_LINK_MODE=public_read oppure upload_request.')
         return cls(token, host, int(parent), auth_type, link_mode)
 
 
@@ -98,8 +98,8 @@ class PCloudClient:
             metadata = result.get('metadata', [])
             if len(metadata) != 1 or metadata[0].get('size') != len(content):
                 raise PCloudError('pCloud: dimensione upload non confermata.')
-        if self.settings.link_mode == 'shared_upload':
-            return self.shared_upload_link(folder_id)
+        if self.settings.link_mode == 'public_read':
+            return self.public_read_link(folder_id)
         existing = self.call('listuploadlinks', {})
         for link in existing.get('uploadlinks', []):
             metadata = link.get('metadata', {})
@@ -112,20 +112,9 @@ class PCloudClient:
             raise PCloudError('pCloud: link di caricamento non restituito.')
         return url
 
-    def shared_upload_link(self, folder_id):
+    def public_read_link(self, folder_id):
         link = self.call('getfolderpublink', {'folderid': folder_id})
-        link_id = link.get('linkid')
         url = link.get('link', '')
-        if type(link_id) is not int or link_id <= 0 or not url.startswith('https://'):
-            raise PCloudError('pCloud: link condiviso non restituito.')
-        # Official pCloud console-client/publiclinks.c: do_change_link_enable_upload.
-        self.call('changepublink', {'linkid': link_id,
-                                   'enableuploadforeveryone': 1,
-                                   'enableuploadforchosenusers': 0})
-        links = self.call('listpublinks', {}).get('publinks', [])
-        verified = next((item for item in links if item.get('linkid') == link_id), {})
-        if (verified.get('metadata', {}).get('folderid') != folder_id
-                or not verified.get('enableuploadforeveryone')
-                or verified.get('enableuploadforchosenusers')):
-            raise PCloudError('pCloud: permesso di caricamento sul link condiviso non confermato.')
+        if not isinstance(url, str) or not url.startswith('https://'):
+            raise PCloudError('pCloud: link pubblico non restituito.')
         return url

@@ -94,3 +94,37 @@ def test_malformed_site_link_does_not_abort_extraction():
     def fetch(url, *_):
         return url, '<a href="https://[invalid">Contatti</a><footer>50019 Sesto Fiorentino</footer>'
     assert w.website_province('a@azienda-demo.it', fetch).name == 'Firenze'
+
+
+@pytest.mark.parametrize('label', ['Sede legale', 'SEDE LEGALE E OPERATIVA', 'Registered office'])
+def test_legal_office_wins_over_operational_branch(label):
+    def fetch(url, *_):
+        return url, f'<h2>{label}</h2><p>Via Roma 1, 50019 Sesto Fiorentino (FI)</p><h2>Sede operativa</h2><p>20121 Milano</p>'
+    result = w.website_province('a@azienda-demo.it', fetch)
+    assert result.name == 'Firenze'
+    assert result.reason == 'website_registered_office'
+
+
+def test_legal_office_found_on_contact_page():
+    def fetch(url, *_):
+        return url, ('<a href="/contatti">Contatti</a><p>Sede operativa: 20121 Milano</p>'
+                     if url.endswith('/') else '<p>Sede legale: Via Roma 1<br>50019 Sesto Fiorentino</p>')
+    assert w.website_province('a@azienda-demo.it', fetch).name == 'Firenze'
+
+
+def test_conflicting_legal_offices_on_different_pages():
+    def fetch(url, *_):
+        return url, ('<a href="/contatti">Contatti</a><p>Sede legale: 20121 Milano</p>'
+                     if url.endswith('/') else '<p>Sede legale: 50019 Sesto Fiorentino</p>')
+    result = w.website_province('a@azienda-demo.it', fetch)
+    assert not result.name
+    assert result.reason == 'website_registered_office_conflict'
+
+
+@pytest.mark.parametrize('html', [
+    '<p>Sede legale: indirizzo non disponibile</p><h2>Sede operativa</h2><p>20121 Milano</p>',
+    '<p>Sede legale: 50019 Milano</p><p>Filiale: 20121 Milano</p>',
+    '<p>Sede legale: 50019 Sesto Fiorentino; 20121 Milano</p>',
+])
+def test_unresolved_legal_office_never_borrows_branch_address(html):
+    assert not w.website_province('a@azienda-demo.it', lambda url,*_: (url,html)).name

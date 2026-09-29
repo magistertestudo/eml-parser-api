@@ -116,7 +116,10 @@ def page_provinces(soup):
     # Use actual postal localities, never arbitrary city mentions or street names.
     for node in soup(['script', 'style', 'noscript', 'nav', 'header']):
         node.decompose()
-    text = ' '.join(soup.stripped_strings)
+    return text_provinces(' '.join(soup.stripped_strings))
+
+
+def text_provinces(text):
     _, cities, _ = indexes()
     found = set()
     for match in re.finditer(r'(?<!\d)(\d{5})\s+([^\d]{2,100})', text):
@@ -134,6 +137,31 @@ def page_provinces(soup):
     return found
 
 
+# A legal-office label applies only until the next office label, never to a
+# later operational branch. Combined legal/operational offices are supported.
+OFFICE_LABEL = re.compile(
+    r"\b(?:sede\s+(?:legale(?:\s+(?:e|ed)\s+(?:operativa|amministrativa))?"
+    r"|operativa|amministrativa|commerciale|secondaria|produttiva)"
+    r"|(?:registered|legal|head|branch)\s+office|stabilimento|filiale)\b", re.I)
+LEGAL_LABEL = re.compile(r"\b(?:sede\s+legale|(?:registered|legal)\s+office)\b", re.I)
+
+
+def registered_office_provinces(soup):
+    for node in soup(['script', 'style', 'noscript', 'nav', 'header']):
+        node.decompose()
+    text = ' '.join(soup.stripped_strings)
+    labels = list(OFFICE_LABEL.finditer(text))
+    found = set()
+    for i, label in enumerate(labels):
+        if not LEGAL_LABEL.search(label[0]):
+            continue
+        end = labels[i + 1].start() if i + 1 < len(labels) else len(text)
+        # Bounded context avoids assigning distant addresses to a bare label.
+        candidates = text_provinces(text[label.end():min(end, label.end() + 500)])
+        found.update(candidates or {''})
+    return found
+
+
 def website_province(email, fetcher=None):
     domain = contact_domain(email)
     if not domain:
@@ -141,7 +169,7 @@ def website_province(email, fetcher=None):
     fetcher = fetcher or fetch_page
     deadline = time.monotonic() + 12
     queue = ['https://' + domain + '/', 'https://www.' + domain + '/']
-    seen, provinces = set(), set()
+    seen, provinces, legal_provinces = set(), set(), set()
     pages = 0
     while queue and pages < 4 and time.monotonic() < deadline:
         url = queue.pop(0)
@@ -170,7 +198,12 @@ def website_province(email, fetcher=None):
                 if allowed_url(target, domain) and target not in seen:
                     links.append(target)
         queue = list(dict.fromkeys(links + queue))
+        legal_provinces.update(registered_office_provinces(soup))
         provinces.update(page_provinces(soup))
+    if legal_provinces:
+        if len(legal_provinces) == 1 and '' not in legal_provinces:
+            return Resolution(legal_provinces.pop(), 'website_registered_office')
+        return Resolution(reason='website_registered_office_conflict')
     if len(provinces) == 1 and '' not in provinces:
         return Resolution(provinces.pop(), 'website_resolved')
     return Resolution(reason='website_conflict' if provinces else 'website_not_found')

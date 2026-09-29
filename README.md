@@ -40,7 +40,7 @@ possono escludere con `PROVINCE_EXCLUDED_DOMAINS`, separati da virgole.
 I domini aziendali che usano Google Workspace/Microsoft 365 restano ammessi.
 
 Province già risolte, dati geografici contraddittori e contatti dichiarati esteri
-non vengono sovrascritti. Sedi in province diverse, siti irraggiungibili, indirizzi
+non vengono sovrascritti. Sedi in province diverse senza una sede legale univoca, siti irraggiungibili, indirizzi
 non riconoscibili o pagine disponibili solo tramite JavaScript lasciano il campo
 vuoto. La lettura usa timeout, limiti di dimensione e un budget di 12 secondi
 (controllato tra le operazioni; la risoluzione DNS dipende dal sistema operativo).
@@ -51,3 +51,11 @@ File modificati: `main.py` integra il ripiego dopo l'estrazione e prima del CSV;
 `website_province.py` gestisce esclusioni, lettura pubblica e indirizzi;
 `tests/test_website_province.py` verifica risoluzione, esclusioni, conflitti,
 errori e destinazioni private. Schema CSV, flusso Dify e archivio pCloud invariati.
+
+### Priorità sede legale (2.0.2)
+
+Fra più sedi sul sito, prevale la provincia dell'indirizzo esplicitamente indicato
+come **sede legale** (anche sede legale e operativa, registered/legal office).
+La scelta considera tutte le pagine consultate: una sede legale contraddittoria
+o non risolvibile non viene sostituita con una sede operativa. In assenza di
+etichette di sede legale, rimane valida la regola della singola provincia.

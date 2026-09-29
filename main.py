@@ -22,7 +22,7 @@ PROMPT = Path(__file__).with_name("prompt_v1.md").read_text(encoding="utf-8")
 
 app = FastAPI(
     title="EML CRM Extractor API",
-    version="2.0.1"
+    version="2.0.2"
 )
 
 
@@ -33,7 +33,7 @@ def home():
 
         "service": "EML CRM Extractor API",
 
-        "version": "2.0.1",
+        "version": "2.0.2",
 
         "status": "running"
 
@@ -78,7 +78,7 @@ def process_email(
     )
 
     record["Provincia"] = resolution.name
-    if resolution.reason == "website_resolved":
+    if resolution.reason in {"website_resolved", "website_registered_office"}:
         logging.getLogger(__name__).info("Provincia ricavata dal sito del contatto, protocollo %s", protocol)
 
     if pcloud is not None:

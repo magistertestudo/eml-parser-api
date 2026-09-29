@@ -9,7 +9,7 @@ import json
 import logging
 from starlette.concurrency import run_in_threadpool
 from pcloud_client import PCloudClient, PCloudError, Settings
-from province_resolver import resolve_province
+from website_province import fallback_province
 
 from parser import parse_eml
 from openai_client import ask_gpt
@@ -22,7 +22,7 @@ PROMPT = Path(__file__).with_name("prompt_v1.md").read_text(encoding="utf-8")
 
 app = FastAPI(
     title="EML CRM Extractor API",
-    version="2.0"
+    version="2.0.1"
 )
 
 
@@ -33,7 +33,7 @@ def home():
 
         "service": "EML CRM Extractor API",
 
-        "version": "2.0",
+        "version": "2.0.1",
 
         "status": "running"
 
@@ -67,7 +67,7 @@ def process_email(
         user_prompt
     )
 
-    resolution = resolve_province(ai)
+    resolution = fallback_province(ai, parsed["header"].get("sender", ""))
     if not resolution.name:
         logging.getLogger(__name__).warning("Provincia non risolta (%s), protocollo %s", resolution.reason, protocol)
 
@@ -76,6 +76,10 @@ def process_email(
         filename=filename,
         protocol=protocol
     )
+
+    record["Provincia"] = resolution.name
+    if resolution.reason == "website_resolved":
+        logging.getLogger(__name__).info("Provincia ricavata dal sito del contatto, protocollo %s", protocol)
 
     if pcloud is not None:
         record["Cartella Allegati"] = pcloud.archive_email(

@@ -23,3 +23,31 @@ Configurare le variabili d'ambiente indicate in `.env.example`. Il file non vien
 pip install pytest
 python -m pytest -q
 ```
+
+### Provincia dal sito del contatto (2.0.1)
+
+Quando la provincia non è ricavabile dai campi estratti dall'email, il server
+visita il sito HTTPS del dominio dell'email del contatto (oppure del mittente,
+solo se l'email del contatto è assente). Consulta home e collegamenti interni
+Contatti/Sedi/Chi siamo, fino a quattro richieste di pagina. Cerca coppie
+CAP-comune italiane e usa il medesimo archivio di normalizzazione provinciale.
+Non invia il testo dell'email né l'indirizzo email al sito.
+
+I principali provider pubblici internazionali, italiani, PEC e temporanei sono
+esclusi tramite elenco locale aggiornabile in `website_province.py`; non è una
+classificazione universale di tutti i provider esistenti. Domini aggiuntivi si
+possono escludere con `PROVINCE_EXCLUDED_DOMAINS`, separati da virgole.
+I domini aziendali che usano Google Workspace/Microsoft 365 restano ammessi.
+
+Province già risolte, dati geografici contraddittori e contatti dichiarati esteri
+non vengono sovrascritti. Sedi in province diverse, siti irraggiungibili, indirizzi
+non riconoscibili o pagine disponibili solo tramite JavaScript lasciano il campo
+vuoto. La lettura usa timeout, limiti di dimensione e un budget di 12 secondi
+(controllato tra le operazioni; la risoluzione DNS dipende dal sistema operativo).
+Sono vietati IP privati e redirect verso altri domini. TLS resta verificato.
+Per disattivare il ripiego: `PROVINCE_WEBSITE_ENABLED=false` (default `true`).
+
+File modificati: `main.py` integra il ripiego dopo l'estrazione e prima del CSV;
+`website_province.py` gestisce esclusioni, lettura pubblica e indirizzi;
+`tests/test_website_province.py` verifica risoluzione, esclusioni, conflitti,
+errori e destinazioni private. Schema CSV, flusso Dify e archivio pCloud invariati.

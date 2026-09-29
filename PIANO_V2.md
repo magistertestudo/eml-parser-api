@@ -1,5 +1,46 @@
 # EML Parser API — candidato v2.0
 
+## Stato aggiornato al 29 settembre 2026
+
+### Collaudo reale dopo autorizzazione a procedere
+
+Creata nella destinazione la cartella `TEST TECNICO EML v2 - 2026-09-29` con
+email sintetica e allegato di prova (2 file). `listfolder`, creazione cartella,
+upload e `listpublinks` funzionano con il token OAuth. **Sia `listuploadlinks`
+sia `createuploadlink` restituiscono codice 1000 con il medesimo token**.
+Di conseguenza il collaudo si interrompe prima della generazione del link;
+nessun caricamento anonimo è stato provato con successo. Il token non è
+globalmente invalido: altre operazioni autenticate hanno avuto successo.
+La causa specifica (supporto OAuth dell'endpoint o permessi aggiuntivi) non è
+ancora confermata. Non distribuire/attivare pCloud finché non risolto.
+I file di test sono lasciati nella cartella per controllo, nessun dato cliente
+è stato caricato. I 67 test locali restano simulazioni e non provano questo
+permesso reale. Il tentativo di aprire Railway è terminato per timeout;
+nessuna variabile né distribuzione è stata modificata da questo collaudo.
+
+**Scelta finale successiva dell'utente:** link diretto pCloud per caricare senza
+account, rinunciando alla consultazione dal medesimo link. Usare
+`PCLOUD_LINK_MODE=upload_request` e `PCLOUD_AUTH_TYPE=oauth`. Questa scelta sostituisce
+il requisito intermedio di link unico lettura+upload descritto sotto. Non serve
+aggiungere un portale su Railway. L'EML e gli allegati restano nella cartella offerta.
+
+Questa sezione sostituisce le indicazioni storiche sotto relative a token mancanti.
+App OAuth attiva; scambio del codice eseguito localmente con `pcloud_oauth.py`.
+Token salvato in `.env.pcloud.oauth.secret`, escluso da Git e con permessi 0600.
+Verifica reale `listfolder`: ID 29662386698, cartella e proprietà confermati.
+L'utente ha dichiarato di aver inserito PCLOUD_ACCESS_TOKEN e PCLOUD_AUTH_TYPE=oauth
+su Railway; non ancora verificati nella UI né distribuiti. Nessun deploy eseguito.
+Il login diretto precedente è fallito con codice 1022, senza token; non usarlo per questa installazione.
+
+L'utente ha confermato che Cartella Allegati deve contenere **un unico link per
+vedere/scaricare e caricare**. La modalità upload_request esistente non soddisfa
+questo requisito e non va attivata come sostituto. Le API pubblicate getfolderpublink
+e changepublink non documentano il parametro per abilitare l'upload sul link condiviso.
+La guida ufficiale https://help.pcloud.com/article/file-requests chiarisce inoltre
+che il caricamento su un link condiviso richiede un account pCloud; l'upload senza
+account è proprio delle File Requests. Occorre verificare l'opzione richiesta e il
+suo contratto API prima di completare la release. Test OAuth aggiunti senza segreti.
+
 Analisi e implementazione del 25 settembre 2026. Base verificata: `0c0ca9cdb1017a25e2c92bec6e00fa7d600c436e` (`update crm`), uguale alla HEAD GitHub alla verifica. Repository originale: `/Users/emanuelemazzieri/Documents/GitHub/eml-parser-api`. Copia isolata: `eml-parser-api-v2`, branch `release/v2.0`. Nessun deploy eseguito.
 
 ## Architettura conservata
